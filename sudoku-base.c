@@ -2,20 +2,15 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-/* mutex global*/
-pthread_mutex_t mutex;
-
 /* grid size = 9x9 */
 #define SIZE 9
 
-/*variável global, quantidade de erros*/
-int _numErros = 0;
+pthread_mutex_t mutex;
 
-/*Funcoes*/
-int verificaLinhaDeTeste(int grid[][SIZE]);
-int funcThreads(int grid[][SIZE]);
-int analiseNumAndFuncThreads(int num, int grid[][SIZE]);
-int numPrimo(int num);
+int _qntdErro = 0;
+int analiseArray (int conjuntoValores[], char area[], int valor, int thread);
+int verificadorSudoku(int grid[][SIZE]);
+int verificaGrade(int linha, int coluna, int grid[][SIZE], int regiao);
 
 /* Funcao que le um grid do arquivo "filename" e o armazena em uma matriz */
 int load_grid(int grid[][SIZE], char *filename) {
@@ -33,19 +28,15 @@ int load_grid(int grid[][SIZE], char *filename) {
 }
 
 int main(int argc, char *argv[]) {
-
-	if(argc == 1) {
-		printf("Erro: informe o arquivo de entrada!\n Uso: %s <arquivo de entrada>\n\n", argv[2]);
-		return 1;
-	}
-
-	//checa a quantidade de numero de threads
+	
 	int numThreads;
-	if (argc == 3) {
-		numThreads = atoi(argv[2]);
-	} else {
+	if (argc == 2) {
 		numThreads = 1;
+	} else {
+		numThreads = atoi(argv[2]);
 	}
+
+	pthread_t thread;
 
 	/* Le o grid do arquivo, armazena na matriz grid e imprime */
 	int grid[9][9];
@@ -57,67 +48,77 @@ int main(int argc, char *argv[]) {
 			printf("\n");
 		}
 		printf("\n");
-	}
-
-	pthread_mutex_init(&mutex, NULL);
-	analiseNumAndFuncThreads(numThreads, grid);
-	printf("%d\n", _numErros);
-	pthread_mutex_destroy(&mutex);
-
-	return 0;
-}
-
-int analiseNumAndFuncThreads (int num, int grid[][SIZE]) {
-
-	for (int i = 1; i <= num; ++i) {
-		if (numPrimo(i) == 1) {
-			pthread_t thread;
-			pthread_create(&thread, NULL, verificaLinhaDeTeste, grid[][SIZE]);
-			//join
+		for (int i = 0; i < numThreads; numThreads++) {
+			pthread_create(&thread, NULL, verificadorSudoku, (void *) grid);
 			pthread_join(thread, NULL);
+        }
+        pthread_exit(NULL);
+	}
+
+	if (_qntdErro == 0) {
+		printf("Nenhum erro encontrado!\n");
+	}
+
+	return 0;
+}
+
+int analiseArray (int conjuntoValores[], char area[], int valor, int thread) {
+    int *temp = (int *) calloc(10, sizeof(int));
+	for (int i = 0; i < 9; i++) {
+		if (conjuntoValores[i] <= 9) {
+			if (temp[conjuntoValores[i] - 1] == 0) {
+				temp[conjuntoValores[i] - 1] = 1;
+			} else {
+			    printf("Thread %d: Erro %s %d. \n", thread, area, valor + 1);
+				return 1;
+			}
 		} else {
-			if (num % 2 == 0) {
-				//
-			} else {
-				//
-			}
+		//valor maior que 10
+		    printf("Thread %d: Erro. Valor maior que 10 \n", thread);
+			return 1;
 		}
-	}
+	}	
+
 	return 0;
 }
 
-int numPrimo (int num) {
-	if (num == 1) {
-		return 0;
-	}
+int verificadorSudoku(int grid[][SIZE]) {
 
-	if (num == 2) {
-		return 1;
-	}
+		for (int i = 0; i < 9; i++) {
+	       _qntdErro += analiseArray(grid[i], "Linha", i, 1);
+	    }
+	    
+	    // int temp[9];
+	    // for(int j = 0; j < 9; j++) {
+	    //     for(int i = 0; i < 9; i++) {
+	    //         temp[i] = grid[i][j];
+	    //     }
+	    //     _qntdErro += analiseArray(temp, "coluna", j, 1);
+	    // }
+	    
+	    // int regiao = 0; 
+	    // for(int i = 0; i < 9; i+=3) {
+	    //     for(int j = 0; j < 9; j+=3) {
+	    //         _qntdErro += verificaGrade(i, j, grid, regiao);           
+	    //         regiao++;
+	    //     }
+	        
+	    // }
+	// }
 
-	for(int m = 2; m < num; m++) {
-		if (num % m != 0)
-			continue;
-		else 
-			return 0;
-	}
-	return 1;
+    return 1;
 }
 
-int verificaLinhaDeTeste (int grid[][SIZE]) {
-	//lock
-	pthread_mutex_lock(&mutex);
+int verificaGrade(int linha, int coluna, int grid[][SIZE], int regiao) {
+    int temp[9];
+    int i = 0;
 
-	int *temp = (int *) calloc(10, sizeof(int));
+    for (; linha < linha + 3; linha++) {
+        for (; coluna < coluna + 3; coluna++) {
+            temp[i] = grid[linha][coluna];
+            i++;
+        }
+    }
 
-		for (int j = 0; j < 9; j++)	{
-			if (temp[grid[0][j] - 1] == 0) {
-				temp[grid[0][j] - 1] = 1;
-			} else {
-			    _numErros++;
-			}
-		}
-	pthread_mutex_unlock(&mutex);
-
-	return 0;
+    return analiseArray(temp, "região", regiao, 1);
 }
