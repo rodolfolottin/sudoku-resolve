@@ -59,9 +59,10 @@ int main(int argc, char *argv[]) {
 		}
 		printf("\n");
 		for(int i = 1; i <= numThreads; i++){
-		     pthread_create(&vetor_threads[i], NULL, verificadorSudoku, &i);	
+			int tempIndex = i;
+		    pthread_create(&vetor_threads[i], NULL, verificadorSudoku, &tempIndex);	
 		}
-	        for (int j = 1; j <= numThreads; j++) {
+	    for (int j = 1; j <= numThreads; j++) {
 			pthread_join(vetor_threads[j], NULL);
 		}
 	       	pthread_mutex_destroy(&mutex_linha);
@@ -83,11 +84,13 @@ int analiseArray (int conjuntoValores[], char area[], int valor, int val_thread)
 				temp[conjuntoValores[i] - 1] = 1;
 			} else {
 				printf("Thread %d: erro %s %d. \n", val_thread, area, valor);
+				//sleep(3);
 				return 1;
 			}
 		}else{
 		//valor maior que 10
 		 	printf("Thread %d: Erro. Valor maior que 10 \n", val_thread);
+		 	//sleep(3);
 			return 1;
 		}
 	}	
@@ -104,34 +107,33 @@ void *verificadorSudoku(void *arg) {
 			pthread_mutex_unlock(&mutex_linha);
 			break;
   		}
-       		aux = _linha;
-    		_linha--;
+       	aux = _linha;
+    	_linha--;
 		pthread_mutex_unlock(&mutex_linha);
 		aux_qntdErro = analiseArray(_grid[aux-1], "linha", aux, val_thread);
 		if (aux_qntdErro > 0) {
 	     		pthread_mutex_lock(&mutex_qntdErro);
 	     		_qntdErro++;
 	     		pthread_mutex_unlock(&mutex_qntdErro);
-		}
+			}
     	} 
 	
 	while (1) {
 		pthread_mutex_lock(&mutex_coluna);
-	    	if (_coluna <= 0) {
+	    if (_coluna <= 0) {
 			pthread_mutex_unlock(&mutex_coluna);
 			break;
 		}
-        	aux = _coluna;
-    		_coluna--;
-    		pthread_mutex_unlock(&mutex_coluna);
-
+        aux = _coluna;
+    	_coluna--;
+    	pthread_mutex_unlock(&mutex_coluna);
 		int *temp = (int *) calloc(10, sizeof(int));
-        	for(int i = 0; i < 9; i++) {        
+		for(int i = 0; i < 9; i++) {        
 			temp[i] = _grid[i][aux-1];
-        	}
-        	aux_qntdErro = analiseArray(temp, "coluna", aux, val_thread);
-        	if (aux_qntdErro > 0) {
-	    		pthread_mutex_lock(&mutex_qntdErro);
+		}
+		aux_qntdErro = analiseArray(temp, "coluna", aux, val_thread);
+    	if (aux_qntdErro > 0) {
+    		pthread_mutex_lock(&mutex_qntdErro);
 			_qntdErro++;
 			pthread_mutex_unlock(&mutex_qntdErro);
 		}
@@ -139,28 +141,28 @@ void *verificadorSudoku(void *arg) {
 
 	while (1) {
 		pthread_mutex_lock(&mutex_regiao);
-	    	if (_regiao <= 0) {
+		if (_regiao <= 0) {
 			pthread_mutex_unlock(&mutex_regiao);
 			break;
 	  	}
-	        aux = _regiao;
-	    	_regiao--;
-	    	pthread_mutex_unlock(&mutex_regiao);
+		aux = _regiao;
+		_regiao--;
+		pthread_mutex_unlock(&mutex_regiao);
 		switch (aux) {
 		    case 1: aux_qntdErro  = verificaGrade(0, 0, aux, val_thread); break;
 	   	    case 2: aux_qntdErro  = verificaGrade(0, 3, aux, val_thread); break;
-	     	    case 3: aux_qntdErro  = verificaGrade(0, 6, aux, val_thread); break;
-	     	    case 4: aux_qntdErro  = verificaGrade(3, 0, aux, val_thread); break;
-	     	    case 5: aux_qntdErro  = verificaGrade(3, 3, aux, val_thread); break;
-	     	    case 6: aux_qntdErro  = verificaGrade(3, 6, aux, val_thread); break;
-	     	    case 7: aux_qntdErro  = verificaGrade(6, 0, aux, val_thread); break;
-	     	    case 8: aux_qntdErro  = verificaGrade(6, 3, aux, val_thread); break;
-	     	    case 9: aux_qntdErro  = verificaGrade(6, 6, aux, val_thread); 
-	        }
-        	if (aux_qntdErro > 0) {
-	    		pthread_mutex_lock(&mutex_qntdErro);
-	    		_qntdErro++;
-	    		pthread_mutex_unlock(&mutex_qntdErro);
+	     	case 3: aux_qntdErro  = verificaGrade(0, 6, aux, val_thread); break;
+	     	case 4: aux_qntdErro  = verificaGrade(3, 0, aux, val_thread); break;
+     	    case 5: aux_qntdErro  = verificaGrade(3, 3, aux, val_thread); break;
+     	    case 6: aux_qntdErro  = verificaGrade(3, 6, aux, val_thread); break;
+     	    case 7: aux_qntdErro  = verificaGrade(6, 0, aux, val_thread); break;
+     	    case 8: aux_qntdErro  = verificaGrade(6, 3, aux, val_thread); break;
+     	    case 9: aux_qntdErro  = verificaGrade(6, 6, aux, val_thread); 
+        }
+    	if (aux_qntdErro > 0) {
+    		pthread_mutex_lock(&mutex_qntdErro);
+    		_qntdErro++;
+    		pthread_mutex_unlock(&mutex_qntdErro);
 		}
 	}
 }
@@ -171,12 +173,12 @@ int verificaGrade(int linha, int coluna, int regiao, int val_thread) {
 	int i = 0;
 	int aux_linha  = linha;
 	int aux_coluna = coluna;
-    	for (; linha < (aux_linha + 3); linha++) {
+	for (; linha < (aux_linha + 3); linha++) {
 		coluna = aux_coluna;	
-       	        for (; coluna < (aux_coluna + 3); coluna++) {
-           		temp[i] = _grid[linha][coluna];
-		        i++;
-        	}
+        for (; coluna < (aux_coluna + 3); coluna++) {
+       		temp[i] = _grid[linha][coluna];
+	        i++;
     	}
-    	return analiseArray(temp, "região", regiao, val_thread);
+	}
+    return analiseArray(temp, "região", regiao, val_thread);
 }
