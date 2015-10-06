@@ -5,12 +5,20 @@
 /* grid size = 9x9 */
 #define SIZE 9
 
-pthread_mutex_t mutex;
+pthread_mutex_t mutex_linha;
+pthread_mutex_t mutex_coluna;
+pthread_mutex_t mutex_regiao;
+pthread_mutex_t mutex_qntdErro;
 
 int _qntdErro = 0;
+int _coluna = 9;
+int _linha = 9;
+int _regiao = 9;
+int _grid[][SIZE];
+
 int analiseArray (int conjuntoValores[], char area[], int valor, int thread);
-int verificadorSudoku(int grid[][SIZE]);
-int verificaGrade(int linha, int coluna, int grid[][SIZE], int regiao);
+int verificadorSudoku();
+int verificaGrade(int linha, int coluna, int regiao);
 
 /* Funcao que le um grid do arquivo "filename" e o armazena em uma matriz */
 int load_grid(int grid[][SIZE], char *filename) {
@@ -28,7 +36,6 @@ int load_grid(int grid[][SIZE], char *filename) {
 }
 
 int main(int argc, char *argv[]) {
-	
 	int numThreads;
 	if (argc == 2) {
 		numThreads = 1;
@@ -37,10 +44,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	pthread_t thread;
-
 	/* Le o grid do arquivo, armazena na matriz grid e imprime */
-	int grid[9][9];
-	if(load_grid(grid, argv[1])) {
+	if(load_grid(_grid, argv[1])) {
 		printf("Quebra-cabecas fornecido:\n");
 		for(int i = 0; i < 9; i++) {
 			for(int j = 0; j < 9; j++)
@@ -48,15 +53,15 @@ int main(int argc, char *argv[]) {
 			printf("\n");
 		}
 		printf("\n");
-		for (int i = 0; i < numThreads; numThreads++) {
-			pthread_create(&thread, NULL, verificadorSudoku, (void *) grid);
+		for (int i = 0; i < numThreads; i++) {
+			pthread_create(&thread, NULL, verificadorSudoku, NULL);
+		}
+        for (int j = 0; j < numThreads; j++) {
 			pthread_join(thread, NULL);
-        }
+		}         
+         
+	    printf("Erros encontrados: %d\n", _qntdErro);
         pthread_exit(NULL);
-	}
-
-	if (_qntdErro == 0) {
-		printf("Nenhum erro encontrado!\n");
 	}
 
 	return 0;
@@ -82,34 +87,81 @@ int analiseArray (int conjuntoValores[], char area[], int valor, int thread) {
 	return 0;
 }
 
-int verificadorSudoku(int grid[][SIZE]) {
+int verificadorSudoku() {
 
-		for (int i = 0; i < 9; i++) {
-	       _qntdErro += analiseArray(grid[i], "Linha", i, 1);
-	    }
-	    
-	    // int temp[9];
-	    // for(int j = 0; j < 9; j++) {
-	    //     for(int i = 0; i < 9; i++) {
-	    //         temp[i] = grid[i][j];
-	    //     }
-	    //     _qntdErro += analiseArray(temp, "coluna", j, 1);
-	    // }
-	    
-	    // int regiao = 0; 
-	    // for(int i = 0; i < 9; i+=3) {
-	    //     for(int j = 0; j < 9; j+=3) {
-	    //         _qntdErro += verificaGrade(i, j, grid, regiao);           
-	    //         regiao++;
-	    //     }
-	        
-	    // }
-	// }
+    int aux = 0;
+    int aux_qntdErro = 0;
 
+    //while o que true?
+    while (true) {
+    	mutex_linha_lock();
+		if (_linha <= 0) {
+			mutex_linha_unlock();
+			break;
+  		}
+        aux = _linha;
+    	_linha--;
+		mutex_linha_unlock();
+		aux_qntdErro = analiseArray(grid[i], "Linha", aux, 1);
+		if (aux_qntdErro > 0) {
+			mutex_qntdErro_lock();
+			_qntdErro++;
+			mutex_qntdErro_unlock();
+		}
+	} 
+	
+	//while o que true?    	       
+	while (true) {
+		mutex_coluna_lock();
+    	if (_coluna <= 0) {
+			mutex_coluna_unlock();
+			break;
+		}
+        aux = _coluna;
+    	_coluna --;
+    	mutex_coluna_unlock();
+        for(int i = 0; i < 9; i++) {
+            int *temp = (int *) calloc(10, sizeof(int));
+	    	temp[i] = grid[i][aux];
+        }
+        aux_qntdErro = analiseArray(temp, "coluna", j, 1);
+        if (aux_qntdErro > 0) {
+	    	mutex_qntdErro_lock();
+	    	_qntdErro++;
+	    	mutex_qntdErro_unlock();
+		}
+	} 
+	
+    //while o que true?  
+    while (true) {
+		mutex_regiao_lock()
+    	if (_regiao <= 0) {
+			mutex_regiao_unlock();
+			break;
+  		}
+        aux = _regiao;
+    	_regiao--;
+    	mutex_regiao_unlock()
+    	int linha_aux;
+    	int coluna_aux;
+		//NAO CONSEGUI PENSAR NUMA LOGICA PRA REGIAO, FAZER "JEITO FEIO" SE FUNCIONAR PENSAMOS NA OTIMIZACAO
+		switch (aux) {
+			CASE: 1: aux_qntdErro  += verificaGrade(0, 0, regiao); 
+			CASE: 2: aux_qntdErro  += verificaGrade(0, 3, regiao); 
+     	    //ATE 9
+      	   
+        }
+        if (aux_qntdErro > 0) {
+			mutex_qntdErro_lock();
+		    _qntdErro++;
+		    mutex_qntdErro_unlock();
+		}
+	}
     return 1;
 }
 
-int verificaGrade(int linha, int coluna, int grid[][SIZE], int regiao) {
+
+int verificaGrade(int linha, int coluna, int regiao) {
     int temp[9];
     int i = 0;
 
